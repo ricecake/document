@@ -15,8 +15,10 @@ shingle(Document, Size) ->
 	do_shingle(Tokens, Size, []).
 
 semi_match(DocumentA, DocumentB) ->
-	TokenA = binary:split(DocumentA, <<" ">>, [global]),
-	TokenB = binary:split(DocumentB, <<" ">>, [global]),
+	{match, ListA} = re:run(DocumentA, <<"[\\[\\]()]|[\\w.\\-]+|\\S+">>, [{capture, all, binary}, global]),
+	{match, ListB} = re:run(DocumentB, <<"[\\[\\]()]|[\\w.\\-]+|\\S+">>, [{capture, all, binary}, global]),
+	TokenA = lists:flatten(ListA),
+	TokenB = lists:flatten(ListB),
 	lcs(TokenA, TokenB).
 
 %%====================================================================
