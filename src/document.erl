@@ -3,7 +3,8 @@
 %% API exports
 -export([
 	shingle/2,
-	semi_match/2
+	semi_match/2,
+	lcs2/2
 ]).
 
 %%====================================================================
@@ -67,6 +68,23 @@ lcs([_SH|ST]=S,[_TH|TT]=T,Cache,Acc1) ->
         false ->
             lcs(ST,T,Cache,Acc)
     end.
+
+
+lcs2(A, B) ->
+	do_lcs(A, B, [], #{}).
+
+do_lcs(A, B, _Acc, #{ {A, B} := LCS } = Cache ) -> {LCS, Cache};
+do_lcs(A, B, Acc, Cache) when length(A) == 0 orelse length(B) == 0->
+	LCS = lists:reverse(Acc),
+	{LCS, Cache#{ {A, B} => LCS} };
+do_lcs([Token |ATail], [Token |BTail], Acc, Cache) ->
+	do_lcs(ATail, BTail, [Token |Acc], Cache);
+do_lcs([_AToken |ATail]=A, [_BToken |BTail]=B, Acc, Cache) ->
+	{LCSA, CacheA} = do_lcs(A, BTail, Acc, Cache),
+	{LCSB, CacheB} = do_lcs(ATail, B, Acc, CacheA),
+	{lists:max([LCSA, LCSB]), CacheB}.
+
+	
 
 maybe_wildcard([wildcard |_]=Acc) -> Acc;
 maybe_wildcard(Acc) -> [wildcard |Acc].
