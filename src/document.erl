@@ -71,14 +71,15 @@ lcs([_SH|ST]=S,[_TH|TT]=T,Cache,Acc1) ->
 
 
 lcs2(A, B) ->
-	do_lcs(A, B, [], #{}).
+	get_lcs(A, B, [], #{}).
 
+get_lcs(A, B, _Acc, #{ {A, B} := LCS } = Cache ) -> {LCS, Cache}.
 
 compute_lcs(A, B, Acc, Cache) when length(A) == 0 orelse length(B) == 0->
 	LCS = lists:reverse(Acc),
 	{LCS, Cache#{ {A, B} => LCS} };
 compute_lcs([Token |ATail], [Token |BTail], Acc, Cache) ->
-	_lcs(ATail, BTail, [Token |Acc], Cache);
+	get_lcs(ATail, BTail, [Token |Acc], Cache);
 compute_lcs([_AToken |ATail]=A, [_BToken |BTail]=B, Acc, Cache) ->
 	{LCSA, CacheA} = get_lcs(A, BTail, Acc, Cache),
 	{LCSB, CacheB} = get_lcs(ATail, B, Acc, CacheA),
