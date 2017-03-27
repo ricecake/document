@@ -4,7 +4,7 @@
 -export([
 	shingle/2,
 	semi_match/2,
-	lcs2/2
+	lcs/2
 ]).
 
 %%====================================================================
@@ -22,6 +22,10 @@ semi_match(DocumentA, DocumentB) ->
 	TokenB = lists:flatten(ListB),
 	lcs(TokenA, TokenB).
 
+lcs(A, B) ->
+	{LCS, _Cache} = get_lcs(A, B, [], #{}),
+	lists:reverse(LCS).
+
 %%====================================================================
 %% Internal functions
 %%====================================================================
@@ -33,22 +37,28 @@ do_shingle([_ | Rest] = List, N, Acc) ->
 	do_shingle(Rest, N, [SubList | Acc]).
 
 
-lcs(A, B) ->
-	get_lcs(A, B, [], #{}).
+get_lcs(A, B, Acc, Cache) ->
+	case maps:find({A, B, Acc}, Cache) of
+		{ok, LCS} -> {LCS, Cache};
+		error     ->
+			{NewLCS, NewCache} = compute_lcs(A, B, Acc, Cache),
+			{NewLCS, NewCache#{ {A, B, Acc} => NewLCS }}
+	end.
 
-get_lcs(A, B, _Acc, #{ {A, B} := LCS } = Cache ) -> {LCS, Cache}.
-
-compute_lcs(A, B, Acc, Cache) when length(A) == 0 orelse length(B) == 0->
-	LCS = lists:reverse(Acc),
-	{LCS, Cache#{ {A, B} => LCS} };
+compute_lcs(A, B, Acc, Cache) when length(A) == 0 orelse length(B) == 0 ->
+	{Acc, Cache};
 compute_lcs([Token |ATail], [Token |BTail], Acc, Cache) ->
 	get_lcs(ATail, BTail, [Token |Acc], Cache);
-compute_lcs([_AToken |ATail]=A, [_BToken |BTail]=B, Acc, Cache) ->
+compute_lcs([_AToken |ATail]=A, [_BToken |BTail]=B, AccIn, Cache) ->
+	Acc = maybe_wildcard(AccIn),
 	{LCSA, CacheA} = get_lcs(A, BTail, Acc, Cache),
 	{LCSB, CacheB} = get_lcs(ATail, B, Acc, CacheA),
-	{lists:max([LCSA, LCSB]), CacheB}.
+	LCS = case length(LCSA) > length(LCSB) of
+		true  -> LCSA;
+		false -> LCSB
+	end,
+	{LCS, CacheB}.
 
-	
 
 maybe_wildcard([wildcard |_]=Acc) -> Acc;
 maybe_wildcard(Acc) -> [wildcard |Acc].
