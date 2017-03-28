@@ -4,7 +4,8 @@
 -export([
 	shingle/2,
 	semi_match/2,
-	lcs/2
+	lcs/2,
+	levenshtein/2
 ]).
 
 %%====================================================================
@@ -25,6 +26,10 @@ semi_match(DocumentA, DocumentB) ->
 lcs(A, B) ->
 	{LCS, _Cache} = get_lcs(A, B, [], #{}),
 	lists:reverse(LCS).
+
+levenshtein(A, B) ->
+	{Dist, _Cache} = get_levenshtein(A, B, #{}),
+	Dist.
 
 %%====================================================================
 %% Internal functions
@@ -58,6 +63,25 @@ compute_lcs([_AToken |ATail]=A, [_BToken |BTail]=B, AccIn, Cache) ->
 		false -> LCSB
 	end,
 	{LCS, CacheB}.
+
+
+get_levenshtein(A, B, Cache) ->
+	case maps:find({A, B}, Cache) of
+		{ok, Dist} -> {Dist, Cache};
+		error     ->
+			{NewDist, NewCache} = compute_levenshtein(A, B, Cache),
+			{NewDist, NewCache#{ {A, B} => NewDist }}
+	end.
+
+compute_levenshtein(A, B, Cache) when length(A) == 0 orelse length(B) == 0 ->
+	{lists:max([length(A), length(B)]), Cache};
+compute_levenshtein([Token|ATail], [Token|BTail], Cache) ->
+	get_levenshtein(ATail, BTail, Cache);
+compute_levenshtein([_AToken |ATail]=A, [_BToken |BTail]=B, Cache) ->
+	{Dist1,Cache1} = get_levenshtein(A,     BTail, Cache),
+	{Dist2,Cache2} = get_levenshtein(ATail, B,     Cache1),
+	{Dist3,Cache3} = get_levenshtein(ATail, BTail, Cache2),
+	{1+lists:min([Dist1, Dist2, Dist3]), Cache3}.
 
 
 maybe_wildcard([wildcard |_]=Acc) -> Acc;
