@@ -5,7 +5,8 @@
 	shingle/2,
 	semi_match/2,
 	lcs/2,
-	levenshtein/2
+	levenshtein/2,
+	cluster/1
 ]).
 
 %%====================================================================
@@ -30,6 +31,8 @@ lcs(A, B) ->
 levenshtein(A, B) ->
 	{Dist, _Cache} = get_levenshtein(A, B, #{}),
 	Dist.
+
+cluster(Set) -> [].
 
 %%====================================================================
 %% Internal functions
