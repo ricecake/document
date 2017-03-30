@@ -6,7 +6,8 @@
 	semi_match/2,
 	lcs/2,
 	levenshtein/2,
-	cluster/1
+	cluster/1,
+	pairs/1
 ]).
 
 %%====================================================================
@@ -32,7 +33,8 @@ levenshtein(A, B) ->
 	{Dist, _Cache} = get_levenshtein(A, B, #{}),
 	Dist.
 
-cluster(Set) -> [].
+cluster(Set) ->
+	[ {A, B, levenshtein(A, B)} || {A, B} <- pairs(Set)].
 
 %%====================================================================
 %% Internal functions
@@ -86,6 +88,19 @@ compute_levenshtein([_AToken |ATail]=A, [_BToken |BTail]=B, Cache) ->
 	{Dist3,Cache3} = get_levenshtein(ATail, BTail, Cache2),
 	{1+lists:min([Dist1, Dist2, Dist3]), Cache3}.
 
+
+pairs([Head |List]) ->
+	do_combine(Head, List, List, []).
+
+do_combine(_Head, [], [], Acc) -> Acc;
+do_combine(_Head, [], [NewHead |NewList], Acc) ->
+	do_combine(NewHead, NewList, NewList, Acc);
+do_combine(Head, [Item |Rest], List, Acc) ->
+	Tuple = case Head > Item of
+		true  -> {Head, Item};
+		false -> {Item, Head}
+	end,
+	do_combine(Head, Rest, List, [Tuple |Acc]).
 
 maybe_wildcard([wildcard |_]=Acc) -> Acc;
 maybe_wildcard(Acc) -> [wildcard |Acc].
