@@ -19,11 +19,7 @@ shingle(Document, Size) ->
 	do_shingle(Tokens, Size, []).
 
 semi_match(DocumentA, DocumentB) ->
-	{match, ListA} = re:run(DocumentA, <<"[\\[\\]()]|[\\w.\\-]+|\\S+">>, [{capture, all, binary}, global]),
-	{match, ListB} = re:run(DocumentB, <<"[\\[\\]()]|[\\w.\\-]+|\\S+">>, [{capture, all, binary}, global]),
-	TokenA = lists:flatten(ListA),
-	TokenB = lists:flatten(ListB),
-	lcs(TokenA, TokenB).
+	lcs(tokenize(DocumentA), tokenize(DocumentB)).
 
 lcs(A, B) ->
 	{LCS, _Cache} = get_lcs(A, B, [], #{}),
@@ -34,7 +30,7 @@ levenshtein(A, B) ->
 	Dist.
 
 cluster(Set) ->
-	[ {A, B, levenshtein(A, B)} || {A, B} <- pairs(Set)].
+	[ {A, B, levenshtein(tokenize(A), tokenize(B))} || {A, B} <- pairs(Set)].
 
 %%====================================================================
 %% Internal functions
@@ -101,6 +97,11 @@ do_combine(Head, [Item |Rest], List, Acc) ->
 		false -> {Item, Head}
 	end,
 	do_combine(Head, Rest, List, [Tuple |Acc]).
+
+tokenize(A) ->
+	{match, ListA} = re:run(A, <<"[\\[\\]()]|[\\w.\\-]+|\\S+">>, [{capture, all, binary}, global]),
+	lists:flatten(ListA).
+	
 
 maybe_wildcard([wildcard |_]=Acc) -> Acc;
 maybe_wildcard(Acc) -> [wildcard |Acc].
