@@ -15,7 +15,7 @@
 %%====================================================================
 
 shingle(Document, Size) ->
-	Tokens = binary:split(Document, <<" ">>, [global]),
+	Tokens = tokenize(Document),
 	do_shingle(Tokens, Size, []).
 
 semi_match(DocumentA, DocumentB) ->
