@@ -30,7 +30,7 @@ levenshtein(A, B) ->
 	Dist.
 
 cluster(Set) ->
-	[ {A, B, levenshtein(tokenize(A), tokenize(B))} || {A, B} <- pairs(Set)].
+	[ {A, B, -1*levenshtein(tokenize(A), tokenize(B))} || {A, B} <- pairs(Set)].
 
 %%====================================================================
 %% Internal functions
