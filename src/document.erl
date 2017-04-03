@@ -30,7 +30,10 @@ levenshtein(A, B) ->
 	Dist.
 
 cluster(Set) ->
-	[ {A, B, -1*levenshtein(tokenize(A), tokenize(B))} || {A, B} <- pairs(Set)].
+	Similarity     = maps:from_list([ {{A, B}, -1*levenshtein(A, B)} || {A, B} <- pairs(Set)]),
+	Responsibility = maps:from_list([ {{A, B}, 0} || {A, B} <- pairs(Set)]),
+	Availability   = maps:from_list([ {{A, B}, 0} || {A, B} <- pairs(Set)]),
+	{ap_state, Similarity, Responsibility, Availability}.
 
 %%====================================================================
 %% Internal functions
