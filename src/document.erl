@@ -1,5 +1,7 @@
 -module(document).
 
+-record(ap_state, {set, sim, res, ava}).
+
 %% API exports
 -export([
 	shingle/2,
@@ -30,14 +32,35 @@ levenshtein(A, B) ->
 	Dist.
 
 cluster(Set) ->
-	Similarity     = maps:from_list([ {{A, B}, -1*levenshtein(A, B)} || {A, B} <- pairs(Set)]),
-	Responsibility = maps:from_list([ {{A, B}, 0} || {A, B} <- pairs(Set)]),
-	Availability   = maps:from_list([ {{A, B}, 0} || {A, B} <- pairs(Set)]),
-	{ap_state, Similarity, Responsibility, Availability}.
+	CleanSet = lists:usort(Set),
+	Pairs = [ {A, B} || A <- CleanSet, B <- CleanSet],
+	Similarity     = maps:from_list([ {{A, B}, -1*levenshtein(A, B)} || {A, B} <- Pairs]),
+	AvgSim = lists:sum([ V||{_, V} <- maps:to_list(Similarity)]) / maps:size(Similarity),
+	SelfSim = maps:from_list([ {{Item, Item}, AvgSim} || Item <- Set ]),
+	Responsibility = maps:from_list([ {{A, B}, 0} || {A, B} <- Pairs]),
+	Availability   = maps:from_list([ {{A, B}, 0} || {A, B} <- Pairs]),
+	do_ap_round_many({ap_state, CleanSet, maps:merge(Similarity, SelfSim), Responsibility, Availability}, 100).
 
 %%====================================================================
 %% Internal functions
 %%====================================================================
+
+do_ap_round_many(S, N) when N =< 0 -> S;
+do_ap_round_many(S, N) ->
+	NewS = do_ap_round(S),
+	do_ap_round_many(NewS, N-1).
+
+do_ap_round(State) ->
+	PostResState = do_update_res(State),
+	do_update_ava(PostResState).
+
+do_update_res(#ap_state{set=Set, sim=Sim, ava=Ava} = State) ->
+	State#ap_state{ res = maps:from_list([ {{I, K}, maps:get({I, K}, Sim) - lists:max([maps:get({I, Kp}, Ava)+maps:get({I,Kp}, Sim) || Kp <- Set, Kp =/= K  ]) } || K <- Set, I <- Set ]) }.
+
+do_update_ava(#ap_state{set=Set, res=Res} = State) ->
+	NewAvaA = maps:from_list([ {{I,K}, lists:min([0, maps:get({K,K}, Res) + lists:sum([ lists:max([0, maps:get({Ip, K}, Res)]) || Ip <- Set, Ip =/= K, Ip =/= I])])} || I <- Set, K <- Set, I =/= K]),
+	NewAvaB = maps:from_list([ {{K, K}, lists:sum([lists:max([0, maps:get({Ip, K}, Res)])|| Ip <- Set, Ip =/= K]) }|| K <- Set]),
+	State#ap_state{ ava=maps:merge(NewAvaA, NewAvaB) }.
 
 do_shingle([], _, Acc) -> lists:reverse(Acc);
 do_shingle(List, N, Acc) when length(List) < N -> do_shingle([], N, Acc);
@@ -95,11 +118,7 @@ do_combine(_Head, [], [], Acc) -> Acc;
 do_combine(_Head, [], [NewHead |NewList], Acc) ->
 	do_combine(NewHead, NewList, NewList, Acc);
 do_combine(Head, [Item |Rest], List, Acc) ->
-	Tuple = case Head > Item of
-		true  -> {Head, Item};
-		false -> {Item, Head}
-	end,
-	do_combine(Head, Rest, List, [Tuple |Acc]).
+	do_combine(Head, Rest, List, [{Head, Item} |Acc]).
 
 tokenize(A) ->
 	{match, ListA} = re:run(A, <<"[\\[\\]()]|[\\w.\\-]+|\\S+">>, [{capture, all, binary}, global]),
