@@ -39,11 +39,15 @@ cluster(Set) ->
 	SelfSim = maps:from_list([ {{Item, Item}, AvgSim} || Item <- Set ]),
 	Responsibility = maps:from_list([ {{A, B}, 0} || {A, B} <- Pairs]),
 	Availability   = maps:from_list([ {{A, B}, 0} || {A, B} <- Pairs]),
-	do_ap_round_many({ap_state, CleanSet, maps:merge(Similarity, SelfSim), Responsibility, Availability}, 100).
+	#ap_state{ res=Res, ava=Ava} = do_ap_round_many({ap_state, CleanSet, maps:merge(Similarity, SelfSim), Responsibility, Availability}, 1000),
+	lists:foldl(fun({Ex, Ex}, Acc)-> Acc; ({Ex, I}, Acc)-> Acc#{ Ex => [ I |maps:get(Ex, Acc, [])] } end, #{}, [ {Ex, I} || {_, {I, Ex}} <- [ lists:max(lists:sort([{maps:get({I, K}, Res)+maps:get({I, K}, Ava), {I, K}} ||  K <- CleanSet])) ||  I <- CleanSet]]).
 
 %%====================================================================
 %% Internal functions
 %%====================================================================
+
+dampen(Key, Val, OldMap) -> {Key, 0.5*maps:get(Key, OldMap) + (1-0.5)*Val}.
+
 
 do_ap_round_many(S, N) when N =< 0 -> S;
 do_ap_round_many(S, N) ->
@@ -54,12 +58,12 @@ do_ap_round(State) ->
 	PostResState = do_update_res(State),
 	do_update_ava(PostResState).
 
-do_update_res(#ap_state{set=Set, sim=Sim, ava=Ava} = State) ->
-	State#ap_state{ res = maps:from_list([ {{I, K}, maps:get({I, K}, Sim) - lists:max([maps:get({I, Kp}, Ava)+maps:get({I,Kp}, Sim) || Kp <- Set, Kp =/= K  ]) } || K <- Set, I <- Set ]) }.
+do_update_res(#ap_state{set=Set, sim=Sim, ava=Ava, res=Res} = State) ->
+	State#ap_state{ res = maps:from_list([ dampen({I, K}, maps:get({I, K}, Sim) - lists:max([maps:get({I, Kp}, Ava)+maps:get({I,Kp}, Sim) || Kp <- Set, Kp =/= K  ]), Res) || K <- Set, I <- Set ]) }.
 
-do_update_ava(#ap_state{set=Set, res=Res} = State) ->
-	NewAvaA = maps:from_list([ {{I,K}, lists:min([0, maps:get({K,K}, Res) + lists:sum([ lists:max([0, maps:get({Ip, K}, Res)]) || Ip <- Set, Ip =/= K, Ip =/= I])])} || I <- Set, K <- Set, I =/= K]),
-	NewAvaB = maps:from_list([ {{K, K}, lists:sum([lists:max([0, maps:get({Ip, K}, Res)])|| Ip <- Set, Ip =/= K]) }|| K <- Set]),
+do_update_ava(#ap_state{set=Set, res=Res, ava=Ava} = State) ->
+	NewAvaA = maps:from_list([ dampen({I,K}, lists:min([0, maps:get({K,K}, Res) + lists:sum([ lists:max([0, maps:get({Ip, K}, Res)]) || Ip <- Set, Ip =/= K, Ip =/= I])]), Ava) || I <- Set, K <- Set, I =/= K]),
+	NewAvaB = maps:from_list([ dampen({K, K}, lists:sum([lists:max([0, maps:get({Ip, K}, Res)])|| Ip <- Set, Ip =/= K]), Ava)|| K <- Set]),
 	State#ap_state{ ava=maps:merge(NewAvaA, NewAvaB) }.
 
 do_shingle([], _, Acc) -> lists:reverse(Acc);
