@@ -9,7 +9,8 @@
 	lcs/2,
 	levenshtein/2,
 	cluster/1,
-	pairs/1
+	pairs/1,
+	tokenize/1
 ]).
 
 %%====================================================================
@@ -34,12 +35,14 @@ levenshtein(A, B) ->
 cluster(Set) ->
 	CleanSet = lists:usort(Set),
 	Pairs = [ {A, B} || A <- CleanSet, B <- CleanSet],
-	Similarity     = maps:from_list([ {{A, B}, -1*levenshtein(A, B)} || {A, B} <- Pairs]),
+	%Similarity     = maps:from_list([ {{A, B}, -1*levenshtein(A, B)} || {A, B} <- Pairs]),
+	Similarity     = maps:from_list([ {{A, B}, -1*(levenshtein(A, B)/length(lcs(A,B)))} || {A, B} <- Pairs]),
+	io:format("~p~n", [Similarity]),
 	AvgSim = lists:sum([ V||{_, V} <- maps:to_list(Similarity)]) / maps:size(Similarity),
 	SelfSim = maps:from_list([ {{Item, Item}, AvgSim} || Item <- Set ]),
 	Responsibility = maps:from_list([ {{A, B}, 0} || {A, B} <- Pairs]),
 	Availability   = maps:from_list([ {{A, B}, 0} || {A, B} <- Pairs]),
-	#ap_state{ res=Res, ava=Ava} = do_ap_round_many({ap_state, CleanSet, maps:merge(Similarity, SelfSim), Responsibility, Availability}, 1000),
+	#ap_state{ res=Res, ava=Ava} = do_ap_round_many({ap_state, CleanSet, maps:merge(Similarity, SelfSim), Responsibility, Availability}, 500),
 	lists:foldl(fun({Ex, Ex}, Acc)-> Acc; ({Ex, I}, Acc)-> Acc#{ Ex => [ I |maps:get(Ex, Acc, [])] } end, #{}, [ {Ex, I} || {_, {I, Ex}} <- [ lists:max(lists:sort([{maps:get({I, K}, Res)+maps:get({I, K}, Ava), {I, K}} ||  K <- CleanSet])) ||  I <- CleanSet]]).
 
 %%====================================================================
@@ -51,6 +54,7 @@ dampen(Key, Val, OldMap) -> {Key, 0.5*maps:get(Key, OldMap) + (1-0.5)*Val}.
 
 do_ap_round_many(S, N) when N =< 0 -> S;
 do_ap_round_many(S, N) ->
+	io:format("."),
 	NewS = do_ap_round(S),
 	do_ap_round_many(NewS, N-1).
 
@@ -125,8 +129,10 @@ do_combine(Head, [Item |Rest], List, Acc) ->
 	do_combine(Head, Rest, List, [{Head, Item} |Acc]).
 
 tokenize(A) ->
-	{match, ListA} = re:run(A, <<"[\\[\\]()]|[\\w.\\-]+|\\S+">>, [{capture, all, binary}, global]),
-	lists:flatten(ListA).
+	case re:run(A, <<"[\\[\\]()]|[\\w.\\-]+|\\S+">>, [{capture, all, binary}, global, unicode]) of
+		{match, ListA} -> lists:flatten(ListA);
+		_ -> binary:split(A, <<" ">>, [global])
+	end.
 	
 
 maybe_wildcard([wildcard |_]=Acc) -> Acc;
