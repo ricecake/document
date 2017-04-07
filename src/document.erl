@@ -37,7 +37,6 @@ cluster(Set) ->
 	Pairs = [ {A, B} || A <- CleanSet, B <- CleanSet],
 	%Similarity     = maps:from_list([ {{A, B}, -1*levenshtein(A, B)} || {A, B} <- Pairs]),
 	Similarity     = maps:from_list([ {{A, B}, -1*(levenshtein(A, B)/length(lcs(A,B)))} || {A, B} <- Pairs]),
-	io:format("~p~n", [Similarity]),
 	AvgSim = lists:sum([ V||{_, V} <- maps:to_list(Similarity)]) / maps:size(Similarity),
 	SelfSim = maps:from_list([ {{Item, Item}, AvgSim} || Item <- Set ]),
 	Responsibility = maps:from_list([ {{A, B}, 0} || {A, B} <- Pairs]),
@@ -54,7 +53,6 @@ dampen(Key, Val, OldMap) -> {Key, 0.5*maps:get(Key, OldMap) + (1-0.5)*Val}.
 
 do_ap_round_many(S, N) when N =< 0 -> S;
 do_ap_round_many(S, N) ->
-	io:format("."),
 	NewS = do_ap_round(S),
 	do_ap_round_many(NewS, N-1).
 
