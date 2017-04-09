@@ -35,7 +35,7 @@ levenshtein(A, B) ->
 cluster(Set) ->
 	CleanSet = lists:usort(Set),
 	Pairs = [ {A, B} || A <- CleanSet, B <- CleanSet],
-	%Similarity     = maps:from_list([ {{A, B}, -1*levenshtein(A, B)} || {A, B} <- Pairs]),
+	
 	Similarity     = maps:from_list([ {{A, B}, -1*(levenshtein(A, B)/length(lcs(A,B)))} || {A, B} <- Pairs]),
 	AvgSim = lists:sum([ V||{_, V} <- maps:to_list(Similarity)]) / maps:size(Similarity),
 	SelfSim = maps:from_list([ {{Item, Item}, AvgSim} || Item <- Set ]),
