@@ -5,6 +5,8 @@
 %% API exports
 -export([
 	shingle/2,
+	resembelance/2,
+	containment/2,
 	semi_match/2,
 	lcs/2,
 	levenshtein/2,
@@ -20,6 +22,11 @@
 shingle(Document, Size) ->
 	Tokens = tokenize(Document),
 	do_shingle(Tokens, Size, []).
+
+resembelance(A, B) -> ok.
+
+containment(A, B) -> ok.
+
 
 semi_match(DocumentA, DocumentB) ->
 	lcs(tokenize(DocumentA), tokenize(DocumentB)).
