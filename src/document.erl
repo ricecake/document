@@ -23,10 +23,15 @@ shingle(Document, Size) ->
 	Tokens = tokenize(Document),
 	do_shingle(Tokens, Size, []).
 
-resembelance(A, B) -> ok.
+resembelance(A, B) ->
+	_AShingle = shingle(A, 4),
+	_BShingle = shingle(B, 4),
+	ok.
 
-containment(A, B) -> ok.
-
+containment(A, B) ->
+	_AShingle = shingle(A, 4),
+	_BShingle = shingle(B, 4),
+	ok.
 
 semi_match(DocumentA, DocumentB) ->
 	lcs(tokenize(DocumentA), tokenize(DocumentB)).
