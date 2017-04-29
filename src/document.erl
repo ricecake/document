@@ -24,13 +24,13 @@ shingle(Document, Size) ->
 	do_shingle(Tokens, Size, []).
 
 resembelance(A, B) ->
-	AShingle = shingle(A, 4),
-	BShingle = shingle(B, 4),
+	AShingle = shingle(A, 3),
+	BShingle = shingle(B, 3),
 	ok.
 
 containment(A, B) ->
-	AShingle = shingle(A, 4),
-	BShingle = shingle(B, 4),
+	AShingle = shingle(A, 3),
+	BShingle = shingle(B, 3),
 	ok.
 
 semi_match(DocumentA, DocumentB) ->
